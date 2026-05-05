@@ -269,17 +269,40 @@ private fun TroubleshootingCheck.title(context: Context): String =
 
 private fun TroubleshootingCheck.statusName(context: Context): String? =
     when (this) {
-        is TroubleshootingCheck.NotificationPermission -> if (result == CheckResult.Passed) context.getString(R.string.troubleshooting_status_granted) else context.getString(R.string.troubleshooting_status_denied)
-        is TroubleshootingCheck.DoNotDisturbOff -> if (result == CheckResult.Passed) context.getString(R.string.troubleshooting_status_off) else context.getString(R.string.troubleshooting_status_on)
+        is TroubleshootingCheck.NotificationPermission ->
+            if (result == CheckResult.Passed) {
+                context.getString(R.string.troubleshooting_status_granted)
+            } else {
+                context.getString(R.string.troubleshooting_status_denied)
+            }
+        is TroubleshootingCheck.DoNotDisturbOff ->
+            if (result == CheckResult.Passed) {
+                context.getString(R.string.troubleshooting_status_off)
+            } else {
+                context.getString(R.string.troubleshooting_status_on)
+            }
         is TroubleshootingCheck.UnrestrictedOptimizationEnabled ->
             when (result) {
-                is CheckResult.Passed -> context.getString(R.string.troubleshooting_status_unrestricted)
-                is CheckResult.Warning -> context.getString(R.string.troubleshooting_status_optimized)
-                is CheckResult.Failed -> context.getString(R.string.troubleshooting_status_restricted)
+                is CheckResult.Passed ->
+                    context.getString(R.string.troubleshooting_status_unrestricted)
+                is CheckResult.Warning ->
+                    context.getString(R.string.troubleshooting_status_optimized)
+                is CheckResult.Failed ->
+                    context.getString(R.string.troubleshooting_status_restricted)
                 else -> null
             }
-        is TroubleshootingCheck.PowerSavingModeOff -> if (result == CheckResult.Passed) context.getString(R.string.troubleshooting_status_off) else context.getString(R.string.troubleshooting_status_on)
-        is TroubleshootingCheck.ExactAlarmPermission -> if (result == CheckResult.Passed) context.getString(R.string.troubleshooting_status_granted) else context.getString(R.string.troubleshooting_status_denied)
+        is TroubleshootingCheck.PowerSavingModeOff ->
+            if (result == CheckResult.Passed) {
+                context.getString(R.string.troubleshooting_status_off)
+            } else {
+                context.getString(R.string.troubleshooting_status_on)
+            }
+        is TroubleshootingCheck.ExactAlarmPermission ->
+            if (result == CheckResult.Passed) {
+                context.getString(R.string.troubleshooting_status_granted)
+            } else {
+                context.getString(R.string.troubleshooting_status_denied)
+            }
     }
 
 private fun TroubleshootingCheck.explanation(context: Context): String? =
@@ -347,18 +370,27 @@ private fun TroubleshootingCheck.resolveAction(): ResolveCheckAction? {
     // with the REQUEST_IGNORE_BATTERY_OPTIMIZATIONS manifest permission for a direct dialog,
     // but Google Play restricts that permission.
     fun requestUnrestrictedBackgroundUsage() =
-        ResolveCheckAction(label = context.getString(R.string.troubleshooting_action_open_battery_settings), logDescription = "opening ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS") {
+        ResolveCheckAction(
+            label = context.getString(R.string.troubleshooting_action_open_battery_settings),
+            logDescription = "opening ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS",
+        ) {
             context.startActivity(Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS))
         }
 
     fun openBatterySaverSettings() =
-        ResolveCheckAction(label = context.getString(R.string.troubleshooting_action_open_battery_settings), logDescription = "opening ACTION_BATTERY_SAVER_SETTINGS") {
+        ResolveCheckAction(
+            label = context.getString(R.string.troubleshooting_action_open_battery_settings),
+            logDescription = "opening ACTION_BATTERY_SAVER_SETTINGS",
+        ) {
             context.startActivity(Intent(Settings.ACTION_BATTERY_SAVER_SETTINGS))
         }
 
     fun openExactAlarmSettings(): ResolveCheckAction? {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) return null
-        return ResolveCheckAction(label = context.getString(R.string.troubleshooting_action_grant_permission), logDescription = "opening ACTION_REQUEST_SCHEDULE_EXACT_ALARM") {
+        return ResolveCheckAction(
+            label = context.getString(R.string.troubleshooting_action_grant_permission),
+            logDescription = "opening ACTION_REQUEST_SCHEDULE_EXACT_ALARM",
+        ) {
             context.startActivity(
                 Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM).apply {
                     data = "package:${context.packageName}".toUri()
