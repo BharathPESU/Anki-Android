@@ -152,6 +152,34 @@
     <string name="boot_service_failed_to_schedule_notifications">Failed to schedule reminders</string>
     <string name="boot_service_too_many_notifications">Too many reminders scheduled. Some will not appear</string>
 
+    <!-- Reminder Troubleshooting -->
+    <string name="troubleshooting_summary_error">Reminders are unavailable.</string>
+    <string name="troubleshooting_summary_warning">Reminders may not work correctly.</string>
+    <string name="troubleshooting_summary_ok">Your reminders should work as expected.</string>
+
+    <string name="troubleshooting_title_notification_permission">Notification permission</string>
+    <string name="troubleshooting_title_do_not_disturb">Do not disturb</string>
+    <string name="troubleshooting_title_battery_optimization">Battery optimization</string>
+    <string name="troubleshooting_title_power_saving_mode">Power saving mode</string>
+    <string name="troubleshooting_title_exact_alarm_permission">Alarms &amp; reminders permission</string>
+
+    <string name="troubleshooting_status_granted">Granted</string>
+    <string name="troubleshooting_status_denied">Denied</string>
+    <string name="troubleshooting_status_off">Off</string>
+    <string name="troubleshooting_status_on">On</string>
+    <string name="troubleshooting_status_unrestricted">Unrestricted</string>
+    <string name="troubleshooting_status_optimized">Optimized</string>
+    <string name="troubleshooting_status_restricted">Restricted</string>
+
+    <string name="troubleshooting_explanation_dnd">Do Not Disturb may mute reminder notifications</string>
+    <string name="troubleshooting_explanation_battery_optimized">Battery optimization may delay reminders</string>
+    <string name="troubleshooting_explanation_battery_restricted">Background usage is disabled. Reminders may not be delivered</string>
+    <string name="troubleshooting_explanation_power_saving">Power saving mode may prevent timely delivery of reminders</string>
+    <string name="troubleshooting_explanation_exact_alarm">Required to schedule reminders at exact times</string>
+
+    <string name="troubleshooting_action_grant_permission">Grant permission</string>
+    <string name="troubleshooting_action_open_battery_settings">Open battery settings</string>
+
     <!-- Locale Selection Dialog -->
     <string name="locale_selection_dialog_title_new">Set Language</string>
     <string name="locale_selection_dialog_summary">Some multilingual keyboards, such as GBoard support changing language when editing text\n\nPlease request the “setImeHintLocales” feature from your keyboard manufacturer if your keyboard does not change language.</string>

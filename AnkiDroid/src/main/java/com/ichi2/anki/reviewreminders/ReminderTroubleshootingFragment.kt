@@ -104,21 +104,21 @@ class ReminderTroubleshootingFragment : Fragment(R.layout.fragment_reminder_trou
                         Triple(
                             R.drawable.ic_cancel_24,
                             context.getColor(android.R.color.holo_red_dark),
-                            "Reminders are unavailable.",
+                            context.getString(R.string.troubleshooting_summary_error),
                         )
 
                     SummaryStatus.Warning ->
                         Triple(
                             R.drawable.ic_warning_24,
                             Themes.getColorFromAttr(context, R.attr.reminderTroubleshootingWarning),
-                            "Reminders may not work correctly.",
+                            context.getString(R.string.troubleshooting_summary_warning),
                         )
 
                     SummaryStatus.Ok ->
                         Triple(
                             R.drawable.ic_check_circle_24,
                             Themes.getColorFromAttr(context, R.attr.reminderTroubleshootingOk),
-                            "Your reminders should work as expected.",
+                            context.getString(R.string.troubleshooting_summary_ok),
                         )
                 }
             binding.summaryIcon.setImageResource(iconRes)
@@ -196,10 +196,10 @@ private class TroubleshootingChecksAdapter(
         val tintColor = check.result.tintColor(context)
         val lastIndex = itemCount - 1
 
-        holder.binding.title.text = check.title()
-        holder.binding.statusName.text = check.statusName()
+        holder.binding.title.text = check.title(context)
+        holder.binding.statusName.text = check.statusName(context)
 
-        val explanationText = check.explanation()
+        val explanationText = check.explanation(context)
         holder.binding.explanation.text = explanationText
         holder.binding.explanation.isVisible = explanationText != null
 
@@ -227,7 +227,7 @@ private class TroubleshootingChecksAdapter(
             holder.binding.actionLink.text = resolveAction.label
             val clickListener =
                 View.OnClickListener {
-                    Timber.i("Launching fix for '%s': %s", check.title(), resolveAction.logDescription)
+                    Timber.i("Launching fix for '%s': %s", check.title(context), resolveAction.logDescription)
                     resolveAction.action()
                 }
             holder.binding.itemContainer.setOnClickListener(clickListener)
@@ -258,49 +258,46 @@ private class TroubleshootingChecksAdapter(
     }
 }
 
-// TODO: move to string resources
-private fun TroubleshootingCheck.title(): String =
+private fun TroubleshootingCheck.title(context: Context): String =
     when (this) {
-        is TroubleshootingCheck.NotificationPermission -> "Notification permission"
-        is TroubleshootingCheck.DoNotDisturbOff -> "Do not disturb"
-        is TroubleshootingCheck.UnrestrictedOptimizationEnabled -> "Battery optimization"
-        is TroubleshootingCheck.PowerSavingModeOff -> "Power saving mode"
-        is TroubleshootingCheck.ExactAlarmPermission -> "Alarms & reminders permission"
+        is TroubleshootingCheck.NotificationPermission -> context.getString(R.string.troubleshooting_title_notification_permission)
+        is TroubleshootingCheck.DoNotDisturbOff -> context.getString(R.string.troubleshooting_title_do_not_disturb)
+        is TroubleshootingCheck.UnrestrictedOptimizationEnabled -> context.getString(R.string.troubleshooting_title_battery_optimization)
+        is TroubleshootingCheck.PowerSavingModeOff -> context.getString(R.string.troubleshooting_title_power_saving_mode)
+        is TroubleshootingCheck.ExactAlarmPermission -> context.getString(R.string.troubleshooting_title_exact_alarm_permission)
     }
 
-// TODO: move to string resources
-private fun TroubleshootingCheck.statusName(): String? =
+private fun TroubleshootingCheck.statusName(context: Context): String? =
     when (this) {
-        is TroubleshootingCheck.NotificationPermission -> if (result == CheckResult.Passed) "Granted" else "Denied"
-        is TroubleshootingCheck.DoNotDisturbOff -> if (result == CheckResult.Passed) "Off" else "On"
+        is TroubleshootingCheck.NotificationPermission -> if (result == CheckResult.Passed) context.getString(R.string.troubleshooting_status_granted) else context.getString(R.string.troubleshooting_status_denied)
+        is TroubleshootingCheck.DoNotDisturbOff -> if (result == CheckResult.Passed) context.getString(R.string.troubleshooting_status_off) else context.getString(R.string.troubleshooting_status_on)
         is TroubleshootingCheck.UnrestrictedOptimizationEnabled ->
             when (result) {
-                is CheckResult.Passed -> "Unrestricted"
-                is CheckResult.Warning -> "Optimized"
-                is CheckResult.Failed -> "Restricted"
+                is CheckResult.Passed -> context.getString(R.string.troubleshooting_status_unrestricted)
+                is CheckResult.Warning -> context.getString(R.string.troubleshooting_status_optimized)
+                is CheckResult.Failed -> context.getString(R.string.troubleshooting_status_restricted)
                 else -> null
             }
-        is TroubleshootingCheck.PowerSavingModeOff -> if (result == CheckResult.Passed) "Off" else "On"
-        is TroubleshootingCheck.ExactAlarmPermission -> if (result == CheckResult.Passed) "Granted" else "Denied"
+        is TroubleshootingCheck.PowerSavingModeOff -> if (result == CheckResult.Passed) context.getString(R.string.troubleshooting_status_off) else context.getString(R.string.troubleshooting_status_on)
+        is TroubleshootingCheck.ExactAlarmPermission -> if (result == CheckResult.Passed) context.getString(R.string.troubleshooting_status_granted) else context.getString(R.string.troubleshooting_status_denied)
     }
 
-// TODO: move to string resources
-private fun TroubleshootingCheck.explanation(): String? =
+private fun TroubleshootingCheck.explanation(context: Context): String? =
     when (this) {
         // no need for an explanation: the 'grant permission' action should be sufficient
         is TroubleshootingCheck.NotificationPermission -> null
         is TroubleshootingCheck.DoNotDisturbOff ->
-            if (result.hasIssue) "Do Not Disturb may mute reminder notifications" else null
+            if (result.hasIssue) context.getString(R.string.troubleshooting_explanation_dnd) else null
         is TroubleshootingCheck.UnrestrictedOptimizationEnabled ->
             when (result) {
-                is CheckResult.Warning -> "Battery optimization may delay reminders"
-                is CheckResult.Failed -> "Background usage is disabled. Reminders may not be delivered"
+                is CheckResult.Warning -> context.getString(R.string.troubleshooting_explanation_battery_optimized)
+                is CheckResult.Failed -> context.getString(R.string.troubleshooting_explanation_battery_restricted)
                 else -> null
             }
         is TroubleshootingCheck.PowerSavingModeOff ->
-            if (result.hasIssue) "Power saving mode may prevent timely delivery of reminders" else null
+            if (result.hasIssue) context.getString(R.string.troubleshooting_explanation_power_saving) else null
         is TroubleshootingCheck.ExactAlarmPermission ->
-            if (result.hasIssue) "Required to schedule reminders at exact times" else null
+            if (result.hasIssue) context.getString(R.string.troubleshooting_explanation_exact_alarm) else null
     }
 
 private fun CheckResult.iconRes(): Int =
@@ -330,11 +327,10 @@ context(fragment: ReminderTroubleshootingFragment)
 private fun TroubleshootingCheck.resolveAction(): ResolveCheckAction? {
     val context = fragment.requireContext()
 
-    // TODO: move labels to string resources
     fun requestNotificationPermission(): ResolveCheckAction? {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return null
         return ResolveCheckAction(
-            label = "Grant permission",
+            label = context.getString(R.string.troubleshooting_action_grant_permission),
             logDescription = "requesting POST_NOTIFICATIONS via system dialog or app settings",
         ) {
             fragment.requestPermissionThroughDialogOrSettings(
@@ -351,18 +347,18 @@ private fun TroubleshootingCheck.resolveAction(): ResolveCheckAction? {
     // with the REQUEST_IGNORE_BATTERY_OPTIMIZATIONS manifest permission for a direct dialog,
     // but Google Play restricts that permission.
     fun requestUnrestrictedBackgroundUsage() =
-        ResolveCheckAction(label = "Open battery settings", logDescription = "opening ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS") {
+        ResolveCheckAction(label = context.getString(R.string.troubleshooting_action_open_battery_settings), logDescription = "opening ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS") {
             context.startActivity(Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS))
         }
 
     fun openBatterySaverSettings() =
-        ResolveCheckAction(label = "Open battery settings", logDescription = "opening ACTION_BATTERY_SAVER_SETTINGS") {
+        ResolveCheckAction(label = context.getString(R.string.troubleshooting_action_open_battery_settings), logDescription = "opening ACTION_BATTERY_SAVER_SETTINGS") {
             context.startActivity(Intent(Settings.ACTION_BATTERY_SAVER_SETTINGS))
         }
 
     fun openExactAlarmSettings(): ResolveCheckAction? {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) return null
-        return ResolveCheckAction(label = "Grant permission", logDescription = "opening ACTION_REQUEST_SCHEDULE_EXACT_ALARM") {
+        return ResolveCheckAction(label = context.getString(R.string.troubleshooting_action_grant_permission), logDescription = "opening ACTION_REQUEST_SCHEDULE_EXACT_ALARM") {
             context.startActivity(
                 Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM).apply {
                     data = "package:${context.packageName}".toUri()
