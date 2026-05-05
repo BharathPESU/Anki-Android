@@ -165,7 +165,7 @@
 
     <string name="troubleshooting_status_granted">Granted</string>
     <string name="troubleshooting_status_denied">Denied</string>
-    <string name="troubleshooting_status_off">Off</string>
+    <string name="troubleshooting_status_off" comment="Reminder troubleshooting: DND/power saving status when disabled">Off</string>
     <string name="troubleshooting_status_on">On</string>
     <string name="troubleshooting_status_unrestricted">Unrestricted</string>
     <string name="troubleshooting_status_optimized">Optimized</string>

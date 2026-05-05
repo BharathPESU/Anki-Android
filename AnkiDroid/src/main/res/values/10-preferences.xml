@@ -62,7 +62,7 @@
     <string name="card_browser_hide_media_summary">Display audio filenames in the card browser question/answer fields</string>
     <string name="col_path" maxLength="41">AnkiDroid directory</string>
     <string name="fullscreen_review" maxLength="41">Fullscreen mode</string>
-    <string name="full_screen_off">Off</string>
+    <string name="full_screen_off" comment="Fullscreen mode preference: option to disable fullscreen">Off</string>
     <string name="full_screen_system">Hide the system bars</string>
     <string name="full_screen_complete">Hide the system bars and answer buttons</string>
     <string name="answer_buttons_position" maxLength="41">Answer buttons position</string>
