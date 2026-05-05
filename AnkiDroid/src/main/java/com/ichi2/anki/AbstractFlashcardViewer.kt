@@ -111,6 +111,8 @@ import com.ichi2.anki.cardviewer.ViewerRefresh
 import com.ichi2.anki.cardviewer.handledGamepadKeyDown
 import com.ichi2.anki.cardviewer.handledGamepadKeyUp
 import com.ichi2.anki.common.annotations.NeedsTest
+import com.ichi2.anki.compat.CompatHelper.Companion.resolveActivityCompat
+import com.ichi2.anki.compat.ResolveInfoFlagsCompat
 import com.ichi2.anki.dialogs.TtsPlaybackErrorDialog
 import com.ichi2.anki.dialogs.TtsVoicesDialogFragment
 import com.ichi2.anki.dialogs.tags.TagsDialog
@@ -156,8 +158,6 @@ import com.ichi2.anki.utils.OnlyOnce.Method.ANSWER_CARD
 import com.ichi2.anki.utils.OnlyOnce.preventSimultaneousExecutions
 import com.ichi2.anki.utils.ext.isTouchWithinBounds
 import com.ichi2.anki.utils.ext.showDialogFragment
-import com.ichi2.compat.CompatHelper.Companion.resolveActivityCompat
-import com.ichi2.compat.ResolveInfoFlagsCompat
 import com.ichi2.themes.Themes
 import com.ichi2.themes.Themes.getResFromAttr
 import com.ichi2.ui.FixedEditText
@@ -580,7 +580,7 @@ abstract class AbstractFlashcardViewer :
         super.setupBackPressedCallbacks()
     }
 
-    protected open fun getContentViewAttr(fullscreenMode: FullScreenMode): Int = R.layout.reviewer
+    protected open fun getContentViewAttr(fullscreenMode: FullScreenMode): Int = R.layout.activity_reviewer
 
     @get:VisibleForTesting(otherwise = VisibleForTesting.PROTECTED)
     val isFullscreen: Boolean
@@ -799,7 +799,7 @@ abstract class AbstractFlashcardViewer :
         }
         val animation = fromGesture.toAnimationTransition().invert()
         Timber.i("Launching 'edit card'")
-        val editCardIntent = NoteEditorLauncher.EditCard(currentCard!!.id, animation).toIntent(this)
+        val editCardIntent = NoteEditorLauncher.EditSelection(listOf(currentCard!!.id), animation).toIntent(this)
         editCurrentCardLauncher.launch(editCardIntent)
     }
 
@@ -1657,22 +1657,22 @@ abstract class AbstractFlashcardViewer :
                 true
             }
 
-            ViewerCommand.FLIP_OR_ANSWER_EASE1 -> {
+            ViewerCommand.ANSWER_AGAIN -> {
                 flipOrAnswerCard(Rating.AGAIN)
                 true
             }
 
-            ViewerCommand.FLIP_OR_ANSWER_EASE2 -> {
+            ViewerCommand.ANSWER_HARD -> {
                 flipOrAnswerCard(Rating.HARD)
                 true
             }
 
-            ViewerCommand.FLIP_OR_ANSWER_EASE3 -> {
+            ViewerCommand.ANSWER_GOOD -> {
                 flipOrAnswerCard(Rating.GOOD)
                 true
             }
 
-            ViewerCommand.FLIP_OR_ANSWER_EASE4 -> {
+            ViewerCommand.ANSWER_EASY -> {
                 flipOrAnswerCard(Rating.EASY)
                 true
             }

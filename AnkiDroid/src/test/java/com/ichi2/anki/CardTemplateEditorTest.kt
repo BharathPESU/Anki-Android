@@ -20,6 +20,8 @@ import android.app.Activity
 import android.content.DialogInterface
 import android.content.Intent
 import android.os.Bundle
+import android.os.Looper
+import android.view.View
 import android.widget.EditText
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.ichi2.anki.CardTemplateEditor.CardTemplateFragment.CardTemplate
@@ -694,6 +696,49 @@ class CardTemplateEditorTest : RobolectricTest() {
     }
 
     @Test
+    fun `ensure 'Discard changes' dialog is enabled after note type changes - Issue 18518`() {
+        fun assertDiscardChangesDialogShown(shadowEditor: ShadowActivity) {
+            advanceRobolectricLooper()
+            assertTrue("Unable to click?", shadowEditor.clickMenuItem(android.R.id.home))
+            advanceRobolectricLooper()
+            assertEquals("Wrong dialog shown?", "Discard changes?", getAlertDialogText(true))
+            clickAlertDialogButton(DialogInterface.BUTTON_POSITIVE, false)
+        }
+
+        // Case 1: Show dialog after deck override
+        withCardTemplateEditor {
+            val shadowEditor = shadowOf(this)
+            onDeckSelected(SelectableDeck.Deck(1, "hello"))
+            assertDiscardChangesDialogShown(shadowEditor)
+        }
+
+        // Case 2: Show dialog after changing card browser appearance
+        withCardTemplateEditor {
+            val shadowEditor = shadowOf(this)
+            assertTrue(
+                "Unable to click?",
+                shadowEditor.clickMenuItem(R.id.action_card_browser_appearance),
+            )
+            advanceRobolectricLooper()
+            shadowEditor.receiveResult(
+                shadowEditor.nextStartedActivity,
+                Activity.RESULT_OK,
+                Intent()
+                    .putExtra(CardTemplateBrowserAppearanceEditor.INTENT_QUESTION_FORMAT, "q")
+                    .putExtra(CardTemplateBrowserAppearanceEditor.INTENT_ANSWER_FORMAT, "a"),
+            )
+            assertDiscardChangesDialogShown(shadowEditor)
+        }
+
+        // Case 3: Show dialog after adding a card type
+        withCardTemplateEditor {
+            val shadowEditor = shadowOf(this)
+            addCardType(this, shadowEditor)
+            assertDiscardChangesDialogShown(shadowEditor)
+        }
+    }
+
+    @Test
     fun testContentPreservedAfterChangingEditorView() {
         val noteTypeName = "Basic"
 
@@ -727,6 +772,23 @@ class CardTemplateEditorTest : RobolectricTest() {
 
         // check if current content is updated or not
         assumeThat(templateEditText.text.toString(), Matchers.equalTo(updatedFrontContent))
+    }
+
+    @Test
+    fun testSaveButtonEnabledAfterException() {
+        withCardTemplateEditor(noteType = col.notetypes.cloze) {
+            editText.setText("New Random Template Text")
+
+            // throw an exception to simulate failure
+            this.tempNoteType = null
+
+            confirmButton.performClick()
+
+            shadowOf(Looper.getMainLooper()).idle()
+
+            assertTrue("Button should be clickable after failure", confirmButton.isClickable)
+            assertTrue("Button should be enabled after failure", confirmButton.isEnabled)
+        }
     }
 
     @Test
@@ -823,7 +885,7 @@ class CardTemplateEditorTest : RobolectricTest() {
         advanceRobolectricLooper()
 
         val resultBundle = Bundle()
-        resultBundle.putString(InsertFieldDialog.KEY_INSERTED_FIELD, fieldToInsert)
+        resultBundle.putString(InsertFieldDialog.KEY_INSERTED_FIELD, expectedFieldText)
         testEditor.supportFragmentManager.setFragmentResult(firstFragmentAgain.insertFieldRequestKey, resultBundle)
         advanceRobolectricLooper()
 
@@ -980,3 +1042,6 @@ val CardTemplateEditor.previewer: TemplatePreviewerFragment
 
 val TemplatePreviewerFragment.ord: CardOrdinal
     get() = this.viewModel.ordFlow.value
+
+val CardTemplateEditor.confirmButton: View
+    get() = findViewById(R.id.action_confirm)

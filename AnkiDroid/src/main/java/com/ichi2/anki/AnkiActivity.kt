@@ -49,7 +49,6 @@ import androidx.core.net.toUri
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
-import androidx.lifecycle.repeatOnLifecycle
 import androidx.viewbinding.ViewBinding
 import com.google.android.material.color.MaterialColors
 import com.google.android.material.snackbar.Snackbar
@@ -58,12 +57,15 @@ import com.ichi2.anim.ActivityTransitionAnimation.Direction
 import com.ichi2.anim.ActivityTransitionAnimation.Direction.DEFAULT
 import com.ichi2.anim.ActivityTransitionAnimation.Direction.NONE
 import com.ichi2.anki.analytics.UsageAnalytics
+import com.ichi2.anki.android.AnkiBroadcastReceiver
 import com.ichi2.anki.android.input.ShortcutGroup
 import com.ichi2.anki.android.input.ShortcutGroupProvider
 import com.ichi2.anki.android.input.shortcut
 import com.ichi2.anki.common.annotations.LegacyNotifications
-import com.ichi2.anki.common.utils.android.isRobolectric
+import com.ichi2.anki.common.crashreporting.CrashReportService
 import com.ichi2.anki.common.utils.annotation.KotlinCleanup
+import com.ichi2.anki.compat.CompatHelper
+import com.ichi2.anki.compat.CompatHelper.Companion.registerReceiverCompat
 import com.ichi2.anki.dialogs.AsyncDialogFragment
 import com.ichi2.anki.dialogs.DatabaseErrorDialog
 import com.ichi2.anki.dialogs.DatabaseErrorDialog.CustomExceptionData
@@ -81,19 +83,13 @@ import com.ichi2.anki.settings.Prefs
 import com.ichi2.anki.snackbar.showSnackbar
 import com.ichi2.anki.utils.ext.showDialogFragment
 import com.ichi2.anki.workarounds.AppLoadedFromBackupWorkaround.showedActivityFailedScreen
-import com.ichi2.compat.CompatHelper
-import com.ichi2.compat.CompatHelper.Companion.registerReceiverCompat
 import com.ichi2.compat.customtabs.CustomTabActivityHelper
 import com.ichi2.compat.customtabs.CustomTabsFallback
 import com.ichi2.compat.customtabs.CustomTabsHelper
 import com.ichi2.themes.Themes
 import com.ichi2.utils.AdaptionUtil
-import com.ichi2.utils.HandlerUtils
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import timber.log.Timber
 import java.io.File
@@ -251,8 +247,8 @@ open class AnkiActivity(
             return
         }
         broadcastReceiver =
-            object : BroadcastReceiver() {
-                override fun onReceive(
+            object : AnkiBroadcastReceiver() {
+                override fun onReceiveBroadcast(
                     context: Context,
                     intent: Intent,
                 ) {
@@ -524,7 +520,7 @@ open class AnkiActivity(
         try {
             showDialogFragment(newFragment)
         } catch (e: IllegalStateException) {
-            Timber.w("failed to show fragment, activity is likely paused. Sending notification")
+            Timber.w(e, "failed to show fragment, activity is likely paused. Sending notification")
             // Store a persistent message to SharedPreferences instructing AnkiDroid to show dialog
             DialogHandler.storeMessage(newFragment.dialogHandlerMessage?.toMessage())
             // Show a basic notification to the user in the notification bar in the meantime
@@ -698,43 +694,6 @@ open class AnkiActivity(
         return false
     }
 
-    // TODO: Move this to an extension method once we have context parameters
-    protected fun <T> Flow<T>.launchCollectionInLifecycleScope(block: suspend (T) -> Unit) {
-        lifecycleScope.launch {
-            lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
-                this@launchCollectionInLifecycleScope.collect {
-                    if (isRobolectric) {
-                        // hack: lifecycleScope/runOnUiThread do not handle our
-                        // test dispatcher overriding both IO and Main
-                        // in tests, waitForAsyncTasksToComplete may be required.
-                        HandlerUtils.postOnNewHandler { runBlocking { block(it) } }
-                    } else {
-                        block(it)
-                    }
-                }
-            }
-        }
-    }
-
-    // see above:
-    protected fun <T> StateFlow<T>.launchCollectionInLifecycleScope(block: suspend (T) -> Unit) {
-        lifecycleScope.launch {
-            var lastValue: T? = null
-            lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
-                this@launchCollectionInLifecycleScope.collect {
-                    // on re-resume, an unchanged value will be emitted for a StateFlow
-                    if (lastValue == value) return@collect
-                    lastValue = value
-                    if (isRobolectric) {
-                        HandlerUtils.postOnNewHandler { runBlocking { block(it) } }
-                    } else {
-                        block(it)
-                    }
-                }
-            }
-        }
-    }
-
     override val shortcuts
         get(): ShortcutGroup? = null
 
@@ -760,7 +719,7 @@ open class AnkiActivity(
             try {
                 FileProvider.getUriForFile(this, authority, attachment)
             } catch (e: IllegalArgumentException) {
-                Timber.e("Could not generate a valid URI for the apkg file")
+                Timber.e(e, "Could not generate a valid URI for the apkg file")
                 showThemedToast(this, resources.getString(R.string.apk_share_error), false)
                 return
             }
@@ -819,7 +778,7 @@ open class AnkiActivity(
         try {
             saveFileLauncher.launch(saveIntent)
         } catch (ex: ActivityNotFoundException) {
-            Timber.w("No activity found to handle saveExportFile request")
+            Timber.w(ex, "No activity found to handle saveExportFile request")
             showSnackbar(R.string.activity_start_failed)
         }
     }

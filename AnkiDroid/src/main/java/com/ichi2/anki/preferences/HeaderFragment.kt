@@ -26,13 +26,13 @@ import com.bytehamster.lib.preferencesearch.SearchPreference
 import com.ichi2.anki.BuildConfig
 import com.ichi2.anki.CollectionManager.TR
 import com.ichi2.anki.R
+import com.ichi2.anki.compat.CompatHelper
 import com.ichi2.anki.preferences.profiles.SwitchProfilesFragment
 import com.ichi2.anki.preferences.reviewer.ReviewerMenuSettingsFragment
 import com.ichi2.anki.reviewreminders.ReviewReminderScope
 import com.ichi2.anki.reviewreminders.ScheduleReminders
 import com.ichi2.anki.settings.Prefs
-import com.ichi2.anki.ui.internationalization.toSentenceCase
-import com.ichi2.compat.CompatHelper
+import com.ichi2.anki.ui.internationalization.sentenceCase
 import com.ichi2.preferences.HeaderPreference
 import com.ichi2.utils.AdaptionUtil
 import timber.log.Timber
@@ -55,8 +55,8 @@ class HeaderFragment : SettingsFragment() {
             }
         }
 
-        requirePreference<Preference>(R.string.pref_dev_options_screen_key)
-            .isVisible = Prefs.isDevOptionsEnabled
+        requirePreference<Preference>(R.string.pref_developer_options_screen_key)
+            .isVisible = Prefs.isDeveloperOptionsEnabled
 
         requirePreference<HeaderPreference>(R.string.pref_review_reminders_screen_key)
             .setOnPreferenceClickListener {
@@ -100,7 +100,7 @@ class HeaderFragment : SettingsFragment() {
             activity: AppCompatActivity,
             searchConfiguration: SearchConfiguration,
         ) {
-            val setDuePreferenceTitle = TR.actionsSetDueDate().toSentenceCase(activity, R.string.sentence_set_due_date)
+            val setDuePreferenceTitle = with(activity) { TR.sentenceCase.setDueDate }
             with(searchConfiguration) {
                 setActivity(activity)
                 setBreadcrumbsEnabled(true)
@@ -119,6 +119,7 @@ class HeaderFragment : SettingsFragment() {
                         .indexItem()
                         .withKey(activity.getString(R.string.pref_review_reminders_screen_key))
                         .withTitle("Review reminders")
+                        .withResId(R.xml.preference_headers)
                 } else {
                     index(R.xml.preferences_notifications)
                 }
@@ -201,11 +202,11 @@ class HeaderFragment : SettingsFragment() {
             // so they should be searchable based on the same conditions
 
             // From [HeaderFragment.onCreatePreferences]
-            if (Prefs.isDevOptionsEnabled) {
-                searchConfiguration.index(R.xml.preferences_dev_options)
-                // From [DevOptionsFragment.initSubscreen]
+            if (Prefs.isDeveloperOptionsEnabled) {
+                searchConfiguration.index(R.xml.preferences_developer_options)
+                // From [DeveloperOptionsFragment.initSubscreen]
                 if (BuildConfig.DEBUG) {
-                    searchConfiguration.ignorePreference(activity.getString(R.string.dev_options_enabled_by_user_key))
+                    searchConfiguration.ignorePreference(activity.getString(R.string.developer_options_enabled_by_user_key))
                 }
             }
 
@@ -258,7 +259,7 @@ class HeaderFragment : SettingsFragment() {
                 is BackupLimitsSettingsFragment -> R.string.pref_backup_limits_screen_key
                 is AdvancedSettingsFragment -> R.string.pref_advanced_screen_key
                 is ReviewerOptionsFragment, is ReviewerMenuSettingsFragment -> R.string.new_reviewer_options_key
-                is DevOptionsFragment -> R.string.pref_dev_options_screen_key
+                is DeveloperOptionsFragment -> R.string.pref_developer_options_screen_key
                 is AboutFragment -> R.string.about_screen_key
                 is SwitchProfilesFragment -> R.string.pref_switch_profile_screen_key
                 else -> null

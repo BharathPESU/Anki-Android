@@ -29,10 +29,12 @@ import androidx.appcompat.app.AlertDialog
 import androidx.core.os.bundleOf
 import com.ichi2.anki.AnkiActivity
 import com.ichi2.anki.AnkiDroidApp
-import com.ichi2.anki.CrashReportService
 import com.ichi2.anki.R
 import com.ichi2.anki.common.annotations.NeedsTest
+import com.ichi2.anki.common.coroutines.applicationScope
+import com.ichi2.anki.common.crashreporting.CrashReportService
 import com.ichi2.anki.common.time.TimeManager
+import com.ichi2.anki.compat.CompatHelper
 import com.ichi2.anki.dialogs.DialogHandler
 import com.ichi2.anki.dialogs.DialogHandlerMessage
 import com.ichi2.anki.dialogs.ImportDialog
@@ -40,7 +42,6 @@ import com.ichi2.anki.exception.ManuallyReportedException
 import com.ichi2.anki.onSelectedCsvForImport
 import com.ichi2.anki.servicelayer.DebugInfoService
 import com.ichi2.anki.showImportDialog
-import com.ichi2.compat.CompatHelper
 import kotlinx.coroutines.launch
 import org.jetbrains.annotations.Contract
 import timber.log.Timber
@@ -103,7 +104,6 @@ object ImportUtils {
     fun isFileAValidDeck(fileName: String): Boolean =
         FileImporter.hasExtension(fileName, "apkg") || FileImporter.hasExtension(fileName, "colpkg")
 
-    @NeedsTest("Verify that only valid text or data file MIME types return true")
     fun isValidTextOrDataFile(
         context: Context,
         uri: Uri,
@@ -161,7 +161,6 @@ object ImportUtils {
             }
         }
 
-        @NeedsTest("Check file name is absolute")
         fun getFileCachedCopy(
             context: Context,
             uri: Uri,
@@ -278,7 +277,7 @@ object ImportUtils {
                     Timber.d("Filename was longer than %d, shortening", FILE_NAME_SHORTENING_THRESHOLD)
                     // take 90 instead of 100 so we don't get the extension
                     val substringLength = FILE_NAME_SHORTENING_THRESHOLD - 10
-                    val shortenedFileName = encoded.substring(0, substringLength) + "..." + getExtension(fileName)
+                    val shortenedFileName = encoded.take(substringLength) + "..." + getExtension(fileName)
                     Timber.d("Shortened filename '%s' to '%s'", fileName, shortenedFileName)
                     // if we don't decode, % is double-encoded
                     URLDecoder.decode(shortenedFileName, "UTF-8")
@@ -328,7 +327,7 @@ object ImportUtils {
         ) {
             // Use applicationScope: IntentHandler calls this and does not have a lifecycleScope
             fun copyDebugInfo(debugInfo: String) =
-                AnkiDroidApp.applicationScope.launch {
+                applicationScope.launch {
                     Timber.i("copying debug info to clipboard")
                     val stringToCopy =
                         buildString {

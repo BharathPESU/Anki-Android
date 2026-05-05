@@ -24,6 +24,7 @@ import androidx.appcompat.app.AlertDialog
 import androidx.core.os.bundleOf
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
+import androidx.core.widget.doAfterTextChanged
 import androidx.core.widget.doOnTextChanged
 import androidx.fragment.app.DialogFragment
 import androidx.fragment.app.viewModels
@@ -40,6 +41,7 @@ import com.ichi2.anki.utils.ext.dismissAllDialogFragments
 import com.ichi2.utils.AndroidUiUtils.hideKeyboard
 import com.ichi2.utils.AndroidUiUtils.setFocusAndOpenKeyboard
 import com.ichi2.utils.create
+import com.ichi2.utils.handleOutsideTouch
 import com.ichi2.utils.moveCursorToEnd
 import com.ichi2.utils.negativeButton
 import com.ichi2.utils.positiveButton
@@ -85,6 +87,7 @@ class EditDeckDescriptionDialog : DialogFragment() {
                 setOnShowListener {
                     positiveButton.setOnClickListener { viewModel.saveAndExit() }
                     negativeButton.setOnClickListener { viewModel.onBackRequested() }
+                    handleOutsideTouch(binding) { viewModel.onBackRequested() }
                 }
                 setCanceledOnTouchOutside(false)
                 setCancelable(false)
@@ -129,6 +132,14 @@ class EditDeckDescriptionDialog : DialogFragment() {
                     // FIXME: the upstream string unexpectedly contains newlines
                     setMessage(TR.deckConfigDescriptionNewHandlingHint().replace("\n", " ").replace("  ", " "))
                 }
+            }
+        }
+
+        with(binding.deckDescriptionInput) {
+            doAfterTextChanged {
+                // avoid an additional layout pass in the same frame as
+                // TextInputLayout's internal requestLayout(), which causes shaking
+                (this.parent as? View)?.post { requestLayout() }
             }
         }
 

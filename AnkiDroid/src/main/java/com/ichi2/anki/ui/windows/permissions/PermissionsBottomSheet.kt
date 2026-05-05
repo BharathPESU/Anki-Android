@@ -26,10 +26,12 @@ import androidx.core.os.BundleCompat
 import androidx.core.os.bundleOf
 import androidx.fragment.app.FragmentManager
 import androidx.fragment.app.commit
+import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
 import com.ichi2.anki.PermissionSet
 import com.ichi2.anki.R
-import com.ichi2.anki.databinding.PermissionsBottomSheetBinding
+import com.ichi2.anki.databinding.FragmentPermissionsBottomSheetBinding
+import com.ichi2.anki.utils.ext.behavior
 import dev.androidbroadcast.vbpd.viewBinding
 
 /**
@@ -42,19 +44,24 @@ import dev.androidbroadcast.vbpd.viewBinding
  */
 @RequiresApi(Build.VERSION_CODES.TIRAMISU)
 class PermissionsBottomSheet : BottomSheetDialogFragment() {
-    private val binding by viewBinding(PermissionsBottomSheetBinding::bind)
+    private val binding by viewBinding(FragmentPermissionsBottomSheetBinding::bind)
 
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
         savedInstanceState: Bundle?,
-    ): View? = inflater.inflate(R.layout.permissions_bottom_sheet, container, false)
+    ): View? = inflater.inflate(R.layout.fragment_permissions_bottom_sheet, container, false)
 
     override fun onViewCreated(
         view: View,
         savedInstanceState: Bundle?,
     ) {
         super.onViewCreated(view, savedInstanceState)
+
+        this.behavior.apply {
+            state = BottomSheetBehavior.STATE_EXPANDED
+            skipCollapsed = true
+        }
 
         binding.closeButton.setOnClickListener { dismiss() }
         childFragmentManager.setFragmentResultListener(DISMISS_RESULT_REQUEST_KEY, this) { _, _ ->

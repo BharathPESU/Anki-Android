@@ -56,7 +56,6 @@
     <string name="CardEditorCards">Karty: %1$s</string>
     <string name="edit_occlusions">Upravit okluze</string>
     <string name="paste_from_clipboard" maxLength="28">Vložit ze schránky</string>
-    <string name="tag_name">Název štítku</string>
     <string name="add_new_filter_tags">Přidat/Filtrovat štítky</string>
     <string name="add_tag" maxLength="28">Přidat štítek</string>
     <string name="check_all_tags" maxLength="28">Označit/odznačit všechny štítky</string>
@@ -72,7 +71,6 @@
     <string name="whiteboard_align_left" comment="Option to align the whiteboard toolbar on the left" maxLength="28">Vlevo</string>
     <string name="whiteboard_align_bottom" comment="Option to align the whiteboard toolbar on the bottom" maxLength="28">Dole</string>
     <string name="whiteboard_align_right" comment="Option to align the whiteboard toolbar on the right" maxLength="28">Vpravo</string>
-    <string name="whiteboard_clear" comment="Button text to clear the whiteboard" maxLength="28">Vymazat</string>
     <string name="whiteboard_more_options" comment="Tooltip of the whiteboard \'More\' button" maxLength="28">Další možnosti</string>
     <string name="whiteboard_remove_brush_message">Jste si jisti, že chcete odstranit tento štětec z vaší palety?</string>
     <string name="whiteboard_ink_eraser" comment="Title of the whiteboard Ink eraser">Inkoust</string>
@@ -86,6 +84,7 @@
     <string name="disable_eraser" maxLength="28">Zakázat gumování</string>
     <string name="hide_whiteboard" maxLength="28">Skrýt tabuli</string>
     <string name="clear_whiteboard" maxLength="28">Smazat tabuli</string>
+    <string name="hide_toolbar" maxLength="28">Skrýt nástrojovou lištu</string>
     <string name="replay_media" maxLength="28">Přehrát multimédia</string>
     <string name="leech_suspend_notification">Karta označena jako pijavice a vyřazena</string>
     <string name="leech_notification">Karta byla označena jako pijavice</string>
@@ -99,6 +98,10 @@
     <string name="webview_crash_loop_dialog_content">Systémovému WebView se nepodařilo vykreslit kartu „%1$s“.\n %2$s</string>
     <string name="slide_to_cancel" comment="Message shown when pressing the record button">Posunutím zrušíte</string>
     <string name="filter_by_flags" maxLength="41">Příznaky</string>
+    <!-- filtered deck options -->
+    <string name="filtered_option_delay_again">Delay for again</string>
+    <string name="filtered_option_delay_hard">Delay for hard</string>
+    <string name="filtered_option_delay_good">Delay for good</string>
     <!-- Custom study options -->
     <string name="custom_study_loading_tags">Vytváří se seznam štítků&#8230;</string>
     <!-- Study options -->
@@ -122,7 +125,6 @@
     <string name="close">Zavřít</string>
     <string name="select">Vybrat</string>
     <string name="field_remapping">%1$s (z \'%2$s\')</string>
-    <string name="confirm_map_cards_to_nothing">Karty mapované na prázdný cíl budou odstraněny. Nezbývají-li už v poznámce žádné karty, bude poznámka ztracena. Opravdu chcete pokračovat?</string>
     <string name="missing_note_type">Nenalezen žádný typ poznámky</string>
     <string name="card_previewer_empty_front_indicator" comment="Extra text appended onto a tab title in the card previewer so that the user can see at a glance whether a card has no front.">%1$s (prázdné)</string>
     <!-- Image cropper -->
@@ -155,8 +157,6 @@
     <string name="preview_progress_bar_text" comment="What card we are on out of how many in card previewer progress bar">%1$d z %2$d</string>
     <string name="rename" comment="Confirm that the renaming action should be processed." maxLength="28">Přejmenovat</string>
     <string name="checks_action" maxLength="28">Zkontrolovat</string>
-    <string name="check_db" maxLength="28">Zkontrolovat databázi</string>
-    <string name="check_media" maxLength="28">Zkontrolovat multimédia</string>
     <string name="empty_cards" maxLength="28">Prázdné karty</string>
     <string name="unknown_type_field_warning">Zápis odpovědi: neznámé pole %s</string>
     <string name="delete_deck" comment="Message on a progress bar starting a deck is being deleted.">Odstraňuje se balíček&#8230;</string>
@@ -199,6 +199,7 @@
     <string name="dyn_deck_desc">Toto je speciální balíček pro studium mimo normální plán. Karty se po opakování automaticky vrátí do svých původních balíčků. Odstraněním tohoto balíčku ze seznamu se všechny zbývající karty vrátí do svých původních balíčků.</string>
     <string name="tag_editor_add_feedback">Klepněte na „%2$s“, abyste potvrdili přidání „%1$s“</string>
     <string name="tag_editor_add_feedback_existing">Vybrán stávající štítek „%1$s“</string>
+    <string name="tag_already_exists">Štítek již existuje</string>
     <!-- Time spans -->
     <!-- Currently only used if exporting APKG fails -->
     <string name="apk_share_error">Chyba sdílení souboru apkg</string>
@@ -212,13 +213,17 @@
     <string name="background_image_title" maxLength="41">Pozadí</string>
     <string name="choose_an_image" maxLength="41">Vybrat obrázek</string>
     <string name="remove_wallpaper_image" maxLength="41">Odebrat pozadí</string>
-    <string name="remove_background_image">Odebrat pozadí?</string>
+    <string name="remove_background_image">Jste si jisti, že chcete odstranit pozadí?</string>
     <!-- Card Template Browser Appearance -->
-    <string name="restore_default" maxLength="28">Obnovit výchozí</string>
+    <string name="restore_default" maxLength="28">Restore default</string>
     <string name="reviewer_tts_cloze_spoken_replacement">Prázdné</string>
     <!-- Whiteboard eraser mode toggle message in Reviewer -->
     <string name="white_board_eraser_enabled">Režim gumování povolen</string>
     <string name="white_board_eraser_disabled">Režim gumování zakázán</string>
+    <string comment="Progress amount e.g. \'28 MB/141 MB\'. %1$s is the current amount, %2$s is the max." name="progress_amount_bytes">%1$s/%2$s</string>
+    <string name="media_file_size_warning_title">Multimédium je příliš velké</string>
+    <string name="media_file_size_warning_message" comment="1$s: File name, 2$s: File size, 3$s: The size limit (e.g. 100MB)">Soubor \"%1$s\" (%2$s) překračuje limit AnkiWeb %3$s a nelze jej synchronizovat. Přesto přidat?</string>
+    <string name="media_file_size_add_anyway">Přesto přidat</string>
     <!-- Whiteboard save image message in the Study Screen -->
     <string name="white_board_image_save_failed">Nepodařilo se uložit obrázek tabule. %s</string>
     <string name="white_board_image_saved">Obrázek tabule uložen do %s</string>
@@ -263,10 +268,14 @@
     <string name="note_editor_audio_too_large">Zvukový soubor je příliš velký, vložte ho prosím ručně</string>
     <string name="ankidroid_cannot_open_after_backup_try_again" comment="After an Android backup is restored, AnkiDroid opens and shows this message.         Opening AnkiDroid again will work correctly">Probíhá zálohování Androidu. Zkuste to prosím znovu</string>
     <string name="create_shortcut_error_vivo" comment="iManager is an app on Vivo phones">Prosím použijte iManager, abyste povolili přidávání zástupců AnkiDroid</string>
+    <string name="create_shortcut_error_miui" comment="Keep the message as short, as this is shown in a toast. %s is the app name: \'AnkiDroid\'">Allow ‘Home screen shortcuts’ in system settings for %s to add shortcuts</string>
     <string name="create_shortcut_failed" comment="home screen == launcher">Vaše domovská obrazovka neumožňuje AnkiDroidu přidávat zástupce</string>
     <string name="create_shortcut_error">Chyba při přidávání zástupce: %s</string>
     <string name="note_editor_capitalize" comment="This is for a switch with a checkbox - on: enabled" maxLength="28">Velká počáteční písmena</string>
     <string name="menu_scroll_toolbar" comment="Checkbox stating whether note editor toolbar is scrollable or stacked. Checked: Scroll" maxLength="28">Posouvat nástrojovou lištu</string>
+    <!-- Dialog hints -->
+    <string name="dialog_hint_url">URL</string>
+    <string name="dialog_hint_certificate">Certifikát</string>
     <!-- IncrementNumberRangePreference -->
     <string name="plus_sign" comment="Label for increment button in IncrementerNumberRangePreference">+</string>
     <string name="minus_sign" comment="Label for decrement button in IncrementerNumberRangePreference">-</string>
@@ -354,7 +363,7 @@
     <string name="shared_decks_login_required">Prosím přihlaste se, abyste mohli stáhnout více balíčků</string>
     <string name="deck_description_field_hint">Popisek</string>
     <string name="deck_description_saved">Popis aktualizován</string>
-    <string name="format_deck_description_as_markdown">Formátovat jako Markdown</string>
+    <string name="format_deck_description_as_markdown">Formátovat jako markdown</string>
     <string name="help_button_content_description">Otevřít nápovědu pro „%s“</string>
     <string name="failed_to_copy">Kopírování se nezdařilo</string>
     <plurals name="unbury_cards_feedback">
@@ -394,4 +403,8 @@
     <string name="scheduler_upgrade_required_dialog_title" comment="Shown in a dialog when user has imported a collection using a very old version of the Anki spaced repetition scheduler">Je vyžadována aktualizace plánovače</string>
     <!-- Whitespace is OK -->
     <string name="list_separator" comment="The character and spacing to display between elements of a list, for example \', \' in \'Apple, Banana, Cherry" tools:ignore="TranslationTypo">, </string>
+    <!-- Other errors -->
+    <!-- Similar to TR.qtMiscNameExists(): "Name exists." -->
+    <string name="error_name_exists">Název již existuje</string>
+    <string comment="Shown when retrying a running action" name="already_in_progress">Already in progress</string>
 </resources>

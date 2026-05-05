@@ -34,8 +34,8 @@ import anki.scheduler.CardAnswer
 import com.ichi2.anki.AnkiDroidApp
 import com.ichi2.anki.BuildConfig
 import com.ichi2.anki.CollectionManager
-import com.ichi2.anki.CrashReportService
 import com.ichi2.anki.FlashCardsContract
+import com.ichi2.anki.common.crashreporting.CrashReportService
 import com.ichi2.anki.common.time.TimeManager
 import com.ichi2.anki.common.utils.annotation.KotlinCleanup
 import com.ichi2.anki.libanki.Card
@@ -60,6 +60,7 @@ import com.ichi2.anki.libanki.sched.DeckNode
 import com.ichi2.utils.FileUtil
 import com.ichi2.utils.FileUtil.internalizeUri
 import com.ichi2.utils.Permissions.arePermissionsDefinedInManifest
+import net.ankiweb.rsdroid.BackendException
 import net.ankiweb.rsdroid.exceptions.BackendDeckIsFilteredException
 import org.json.JSONArray
 import org.json.JSONException
@@ -83,6 +84,8 @@ import java.io.IOException
  * * .../decks/# (access the specified deck)
  * * .../selected_deck (access the currently selected deck)
  * * .../media (add media files to anki collection.media)
+ * * .../cards (search for cards)
+ * * .../cards/# (direct access to card)
  *
  * Note that unlike Android's contact providers:
  *
@@ -90,6 +93,10 @@ import java.io.IOException
  *  * it's not possible to access cards of a note without providing the note's ID
  *
  */
+
+// TODO: Consider streaming Cursor results instead of materializing all rows
+//  to avoid potential OOM for large queries.
+//  Tracked in: https://github.com/ankidroid/Anki-Android/issues/20253
 class CardContentProvider : ContentProvider() {
     companion object {
         // URI types
@@ -109,6 +116,8 @@ class CardContentProvider : ContentProvider() {
         private const val DECK_SELECTED = 4001
         private const val DECKS_ID = 4002
         private const val MEDIA = 5000
+        private const val CARDS = 6000
+        private const val CARD_ID = 6001
         private val sUriMatcher = UriMatcher(UriMatcher.NO_MATCH)
 
         /**
@@ -160,6 +169,8 @@ class CardContentProvider : ContentProvider() {
             addUri("decks/#", DECKS_ID)
             addUri("selected_deck/", DECK_SELECTED)
             addUri("media", MEDIA)
+            addUri("cards", CARDS)
+            addUri("cards/#", CARD_ID)
 
             for (idx in sDefaultNoteProjectionDBAccess.indices) {
                 if (sDefaultNoteProjectionDBAccess[idx] == FlashCardsContract.Note._ID) {
@@ -191,6 +202,8 @@ class CardContentProvider : ContentProvider() {
             NOTE_TYPES_ID_TEMPLATES_ID -> FlashCardsContract.CardTemplate.CONTENT_ITEM_TYPE
             SCHEDULE -> FlashCardsContract.ReviewInfo.CONTENT_TYPE
             DECKS, DECK_SELECTED, DECKS_ID -> FlashCardsContract.Deck.CONTENT_TYPE
+            CARDS -> FlashCardsContract.Card.CONTENT_TYPE
+            CARD_ID -> FlashCardsContract.Card.CONTENT_ITEM_TYPE
             else -> throw IllegalArgumentException("uri $uri is not supported")
         }
     }
@@ -404,6 +417,50 @@ class CardContentProvider : ContentProvider() {
                 val rv = MatrixCursor(columns, 1)
                 val counts = JSONArray(listOf(col.sched.counts()))
                 addDeckToCursor(id, name, counts, rv, col, columns)
+                rv
+            }
+            CARDS -> {
+                // Search for cards using Anki browser syntax
+                val columns = projection ?: FlashCardsContract.Card.DEFAULT_PROJECTION
+                val query = selection ?: ""
+
+                val cardIds =
+                    try {
+                        col.findCards(query)
+                    } catch (e: BackendException.BackendSearchException) {
+                        throw IllegalArgumentException(
+                            "Invalid Anki search query: \"$query\"",
+                            e,
+                        )
+                    }
+
+                // Fast path: Only if _id is requested
+                val onlyRequestingId = columns.singleOrNull() == FlashCardsContract.Card._ID
+
+                if (onlyRequestingId) {
+                    // Return IDs without fetching card objects
+                    val rv = MatrixCursor(columns, cardIds.size)
+                    for (cardId in cardIds) {
+                        rv.newRow().add(cardId)
+                    }
+                    rv
+                } else {
+                    // Get all requested fields
+                    val rv = MatrixCursor(columns, cardIds.size)
+                    for (cardId in cardIds) {
+                        val card = col.getCard(cardId)
+                        addCardToCursor(card, rv, col, columns)
+                    }
+                    rv
+                }
+            }
+            CARD_ID -> {
+                // Direct access to specific card by ID
+                val cardId = uri.pathSegments[1].toLong()
+                val columns = projection ?: FlashCardsContract.Card.DEFAULT_PROJECTION
+                val rv = MatrixCursor(columns, 1)
+                val card = col.getCard(cardId)
+                addCardToCursor(card, rv, col, columns)
                 rv
             }
             else -> throw IllegalArgumentException("uri $uri is not supported")
@@ -977,18 +1034,10 @@ class CardContentProvider : ContentProvider() {
                     throw IllegalArgumentException(filteredSubdeck.message)
                 }
                 val deck: Deck = col.decks.getLegacy(did)!!
-                @KotlinCleanup("remove the null check if deck is found to be not null in DeckManager.get(Long)")
-                @Suppress("SENSELESS_COMPARISON")
-                if (deck != null) {
-                    try {
-                        val deckDesc = values.getAsString(FlashCardsContract.Deck.DECK_DESC)
-                        if (deckDesc != null) {
-                            deck.put("desc", deckDesc)
-                        }
-                    } catch (e: JSONException) {
-                        Timber.e(e, "Could not set a field of new deck %s", deckName)
-                        return null
-                    }
+                val deckDesc = values.getAsString(FlashCardsContract.Deck.DECK_DESC)
+                if (deckDesc != null) {
+                    deck.description = deckDesc
+                    col.decks.save(deck)
                 }
                 Uri.withAppendedPath(FlashCardsContract.Deck.CONTENT_ALL_URI, did.toString())
             }
@@ -1116,15 +1165,33 @@ class CardContentProvider : ContentProvider() {
         val rb = rv.newRow()
         for (column in columns) {
             when (column) {
+                FlashCardsContract.Card._ID -> rb.add(currentCard.id)
                 FlashCardsContract.Card.NOTE_ID -> rb.add(currentCard.nid)
                 FlashCardsContract.Card.CARD_ORD -> rb.add(currentCard.ord)
                 FlashCardsContract.Card.CARD_NAME -> rb.add(cardName)
                 FlashCardsContract.Card.DECK_ID -> rb.add(currentCard.did)
+                FlashCardsContract.Card.REPS -> rb.add(currentCard.reps)
+                FlashCardsContract.Card.LAPSES -> rb.add(currentCard.lapses)
+                FlashCardsContract.Card.TYPE -> rb.add(currentCard.type.code)
+                FlashCardsContract.Card.ORIGINAL_DECK_ID -> rb.add(currentCard.oDid)
                 FlashCardsContract.Card.QUESTION -> rb.add(question)
                 FlashCardsContract.Card.ANSWER -> rb.add(answer)
                 FlashCardsContract.Card.QUESTION_SIMPLE -> rb.add(currentCard.renderOutput(col).questionText)
                 FlashCardsContract.Card.ANSWER_SIMPLE -> rb.add(currentCard.renderOutput(col, false).answerText)
                 FlashCardsContract.Card.ANSWER_PURE -> rb.add(currentCard.pureAnswer(col))
+                FlashCardsContract.Card.RAW_QUEUE -> rb.add(currentCard.queue.code)
+                FlashCardsContract.Card.RAW_DUE -> rb.add(currentCard.due)
+                FlashCardsContract.Card.RAW_ORIGINAL_DUE -> rb.add(currentCard.oDue)
+                FlashCardsContract.Card.INTERVAL -> rb.add(currentCard.ivl)
+                FlashCardsContract.Card.RAW_SM2_FACTOR -> rb.add(currentCard.factor)
+                FlashCardsContract.Card.RAW_LEFT -> rb.add(currentCard.left)
+                FlashCardsContract.Card.ORIGINAL_POSITION -> rb.add(currentCard.originalPosition)
+                FlashCardsContract.Card.RAW_CUSTOM_DATA -> rb.add(currentCard.customData)
+                FlashCardsContract.Card.FSRS_STABILITY -> rb.add(currentCard.memoryStateStability)
+                FlashCardsContract.Card.FSRS_DIFFICULTY -> rb.add(currentCard.memoryStateDifficulty)
+                FlashCardsContract.Card.FSRS_DESIRED_RETENTION -> rb.add(currentCard.fsrsDesiredRetention)
+                FlashCardsContract.Card.FSRS_DECAY -> rb.add(currentCard.decay)
+                FlashCardsContract.Card.LAST_REVIEW_TIME_SECONDS -> rb.add(currentCard.lastReviewTimeSecs)
                 else -> throw UnsupportedOperationException("Queue \"$column\" is unknown")
             }
         }
@@ -1266,7 +1333,7 @@ class CardContentProvider : ContentProvider() {
         } else {
             Timber.e(
                 "Requested deck with id %d was not found in deck list. Either the deckID provided was wrong" +
-                    "or the deck has been deleted in the meantime.",
+                    " or the deck has been deleted in the meantime.",
                 did,
             )
             false
@@ -1395,3 +1462,12 @@ private fun NotetypeJson.getEmptyCardIds(col: Collection): List<CardId> {
         .filter { noteIdsOfType.contains(it.noteId) }
         .flatMap { it.cardIdsList }
 }
+
+private val Card.memoryStateStability: Float?
+    get() = memoryState?.stability
+
+private val Card.memoryStateDifficulty: Float?
+    get() = memoryState?.difficulty
+
+private val Card.fsrsDesiredRetention: Float?
+    get() = desiredRetention

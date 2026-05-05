@@ -28,7 +28,7 @@ import com.ichi2.anki.AnkiDroidApp
 import com.ichi2.anki.BuildConfig
 import com.ichi2.anki.Info
 import com.ichi2.anki.R
-import com.ichi2.anki.databinding.AboutLayoutBinding
+import com.ichi2.anki.databinding.FragmentAboutBinding
 import com.ichi2.anki.launchCatchingTask
 import com.ichi2.anki.requireAnkiActivity
 import com.ichi2.anki.scheduling.Fsrs
@@ -47,8 +47,8 @@ import java.util.Date
 import java.util.Locale
 import net.ankiweb.rsdroid.BuildConfig as BackendBuildConfig
 
-class AboutFragment : Fragment(R.layout.about_layout) {
-    private val binding by viewBinding(AboutLayoutBinding::bind)
+class AboutFragment : Fragment(R.layout.fragment_about) {
+    private val binding by viewBinding(FragmentAboutBinding::bind)
 
     override fun onViewCreated(
         view: View,
@@ -68,7 +68,7 @@ class AboutFragment : Fragment(R.layout.about_layout) {
         } ?: ""
 
         // Logo secret
-        binding.appLogo.setOnClickListener(DevOptionsSecretClickListener(this))
+        binding.appLogo.setOnClickListener(DeveloperOptionsSecretClickListener(this))
 
         // Contributors text
         val contributorsLink = getString(R.string.link_contributors)
@@ -134,37 +134,37 @@ class AboutFragment : Fragment(R.layout.about_layout) {
      * Click listener which enables developer options on release builds
      * if the user clicks it a minimum number of times
      */
-    private class DevOptionsSecretClickListener(
+    private class DeveloperOptionsSecretClickListener(
         val fragment: Fragment,
     ) : View.OnClickListener {
         private var clickCount = 0
         private val clickLimit = 6
 
         override fun onClick(view: View) {
-            if (Prefs.isDevOptionsEnabled) {
+            if (Prefs.isDeveloperOptionsEnabled) {
                 return
             }
             if (++clickCount == clickLimit) {
-                showEnableDevOptionsDialog(view.context)
+                showEnableDeveloperOptionsDialog(view.context)
             }
         }
 
         /**
          * Shows a dialog to confirm if developer options should be enabled or not
          */
-        fun showEnableDevOptionsDialog(context: Context) {
+        fun showEnableDeveloperOptionsDialog(context: Context) {
             AlertDialog.Builder(context).show {
                 setTitle(R.string.dev_options_enabled_pref)
                 setIcon(R.drawable.ic_warning)
                 setMessage(R.string.dev_options_warning)
-                setPositiveButton(R.string.dialog_ok) { _, _ -> enableDevOptions(context) }
+                setPositiveButton(R.string.dialog_ok) { _, _ -> enableDeveloperOptions(context) }
                 setNegativeButton(R.string.dialog_cancel) { _, _ -> clickCount = 0 }
                 setCancelable(false)
             }
         }
 
-        fun enableDevOptions(context: Context) {
-            Prefs.isDevOptionsEnabled = true
+        fun enableDeveloperOptions(context: Context) {
+            Prefs.isDeveloperOptionsEnabled = true
             fragment.requireActivity().recreate()
             showThemedToast(context, R.string.dev_options_enabled_msg, shortLength = true)
         }

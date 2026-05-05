@@ -296,6 +296,14 @@ open class PrefsRepository(
      */
     var reminderNotifsRequestShown by booleanPref(R.string.reminder_notifs_request_shown_key, defaultValue = false)
 
+    /**
+     * A list of all recent deserialization errors that have occurred when trying to load review reminders from storage.
+     * For example, review reminders are deserialized and have their alarms scheduled when the device starts, but
+     * if the deserialization process fails and no valid migrations are available, the error can be put into this string
+     * so that the next time the user opens the app, an error dialog can be shown to inform them of the issue.
+     */
+    var reviewReminderDeserializationErrors by stringPref(R.string.review_reminder_deserialization_errors_key)
+
     // *************************************** Permissions ************************************** //
 
     // Flags for whether the system UI dialog for requesting certain permissions has been shown before.
@@ -328,6 +336,8 @@ open class PrefsRepository(
      * Whether the system UI dialog for requesting audio recording permissions has been shown before.
      */
     var recordAudioPermissionRequested by booleanPref(R.string.record_audio_permission_requested_key, false)
+
+    var internetPermissionRequested by booleanPref(R.string.internet_permission_requested_key, false)
 
     // **************************************** Reviewer **************************************** //
 
@@ -385,17 +395,20 @@ open class PrefsRepository(
      * Whether developer options should be shown to the user.
      * True in case [BuildConfig.DEBUG] is true
      * or if the user has enabled it with the secret on [com.ichi2.anki.preferences.AboutFragment]
+     *
+     * @see com.ichi2.anki.preferences.DeveloperOptionsFragment
      */
-    var isDevOptionsEnabled: Boolean
-        get() = getBoolean(R.string.dev_options_enabled_by_user_key, false) || BuildConfig.DEBUG
-        set(value) = putBoolean(R.string.dev_options_enabled_by_user_key, value)
+    var isDeveloperOptionsEnabled: Boolean
+        get() = getBoolean(R.string.developer_options_enabled_by_user_key, false) || BuildConfig.DEBUG
+        set(value) = putBoolean(R.string.developer_options_enabled_by_user_key, value)
 
     var isNewStudyScreenEnabled by booleanPref(R.string.new_reviewer_options_key, false)
 
     val devIsCardBrowserFragmented: Boolean
         get() = getBoolean(R.string.dev_card_browser_fragmented, false)
 
-    val devUsingCardBrowserSearchView: Boolean by booleanPref(R.string.dev_card_browser_search_view, false)
+    @set:VisibleForTesting
+    var devUsingCardBrowserSearchView: Boolean by booleanPref(R.string.dev_card_browser_search_view, false)
 
     val isWebDebugEnabled: Boolean
         get() = (getBoolean(R.string.html_javascript_debugging_key, false) || BuildConfig.DEBUG) && !isRunningAsUnitTest

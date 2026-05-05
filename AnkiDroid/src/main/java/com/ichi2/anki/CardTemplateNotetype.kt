@@ -23,12 +23,12 @@ import android.os.Parcelable
 import androidx.core.os.bundleOf
 import com.ichi2.anki.CollectionManager.withCol
 import com.ichi2.anki.common.annotations.NeedsTest
+import com.ichi2.anki.compat.CompatHelper.Companion.compat
+import com.ichi2.anki.compat.CompatHelper.Companion.getSerializableCompat
 import com.ichi2.anki.libanki.CardTemplate
 import com.ichi2.anki.libanki.NoteTypeId
 import com.ichi2.anki.libanki.NotetypeJson
 import com.ichi2.anki.observability.undoableOp
-import com.ichi2.compat.CompatHelper.Companion.compat
-import com.ichi2.compat.CompatHelper.Companion.getSerializableCompat
 import timber.log.Timber
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
@@ -542,8 +542,20 @@ class NotetypeFile(
                 NotetypeJson(target.toString())
             }
         } catch (e: IOException) {
-            Timber.e(e, "Unable to read+parse tempNoteType from file %s", absolutePath)
+            Timber.w(e, "Unable to read+parse tempNoteType from file %s", absolutePath)
             throw e
+        }
+
+    /**
+     * Returns the notetype, or `null` if the backing file can't be read (e.g. the temp
+     * file was cleaned up by the OS after process death, or the user cleared app data).
+     */
+    fun getNotetypeOrNull(): NotetypeJson? =
+        try {
+            getNotetype()
+        } catch (e: IOException) {
+            Timber.d(e, "Failed to read notetype")
+            null
         }
 
     override fun describeContents(): Int = 0

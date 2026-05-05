@@ -22,6 +22,7 @@ import androidx.core.content.ContextCompat
 import androidx.core.os.BundleCompat
 import androidx.core.os.bundleOf
 import androidx.core.view.isVisible
+import androidx.core.widget.doAfterTextChanged
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.flowWithLifecycle
 import androidx.lifecycle.lifecycleScope
@@ -173,14 +174,14 @@ class TagsDialog : AnalyticsDialogFragment {
 
     @NeedsTest(
         "In EDIT_TAGS dialog, long-clicking a tag should open the add tag dialog with the clicked tag" +
-            "filled as prefix properly. In other dialog types, long-clicking a tag behaves like a short click.",
+            " filled as prefix properly. In other dialog types, long-clicking a tag behaves like a short click.",
     )
     override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
         binding = DialogTagsBinding.inflate(layoutInflater)
 
         val positiveText =
             if (type == DialogType.EDIT_TAGS) {
-                getString(R.string.dialog_ok)
+                getString(R.string.dialog_confirm)
             } else {
                 getString(R.string.select)
             }
@@ -314,7 +315,7 @@ class TagsDialog : AnalyticsDialogFragment {
         toolbar.setTitle(titleRes)
 
         val toolbarAddItem = toolbar.menu.findItem(R.id.tags_dialog_action_add)
-        val drawable = ContextCompat.getDrawable(requireContext(), R.drawable.ic_add_white)
+        val drawable = ContextCompat.getDrawable(requireContext(), R.drawable.ic_add)
         drawable?.setTint(requireContext().getColor(R.color.white))
         toolbarAddItem.icon = drawable
 
@@ -372,17 +373,19 @@ class TagsDialog : AnalyticsDialogFragment {
      * @param prefixTag: The tag to be prefilled into the EditText section. A trailing '::' will be appended.
      */
     @NeedsTest("The prefixTag should be prefilled properly")
+    @NeedsTest("Entering an existing tag should show an error and disable the OK button")
+    @NeedsTest("Entering a new valid tag should clear the error and enable the OK button")
     private fun createAddTagDialog(prefixTag: String?) {
         val addTagDialog =
             AlertDialog
                 .Builder(requireActivity())
                 .show {
                     title(text = getString(R.string.add_tag))
-                    positiveButton(R.string.dialog_ok)
+                    positiveButton(R.string.menu_add)
                     negativeButton(R.string.dialog_cancel)
                     setView(R.layout.dialog_generic_text_input)
                 }.input(
-                    hint = getString(R.string.tag_name),
+                    hint = TR.actionsName().dropLastWhile { it == ':' },
                     inputType = InputType.TYPE_CLASS_TEXT,
                     displayKeyboard = true,
                 ) { d: AlertDialog?, input: CharSequence ->
@@ -396,6 +399,46 @@ class TagsDialog : AnalyticsDialogFragment {
             inputET.setText("$prefixTag ")
         }
         inputET.moveCursorToEnd()
+        val positiveButton =
+            addTagDialog.getButton(AlertDialog.BUTTON_POSITIVE)
+
+        positiveButton.isEnabled = false
+
+        val textInputLayout =
+            inputET.parent?.parent
+                as? com.google.android.material.textfield.TextInputLayout
+
+        inputET.doAfterTextChanged { text ->
+
+            val rawTag = text?.toString()?.trim()
+
+            if (rawTag.isNullOrEmpty()) {
+                textInputLayout?.error = null
+                positiveButton.isEnabled = false
+                return@doAfterTextChanged
+            }
+
+            lifecycleScope.launch {
+                val tags = viewModel.tags.await()
+
+                val normalized =
+                    TagsUtil.getUniformedTag(rawTag)
+
+                val exists =
+                    tags.contains(normalized)
+
+                if (exists) {
+                    textInputLayout?.error =
+                        getString(R.string.tag_already_exists)
+
+                    positiveButton.isEnabled = false
+                } else {
+                    textInputLayout?.error = null
+
+                    positiveButton.isEnabled = true
+                }
+            }
+        }
         addTagDialog.show()
     }
 
@@ -452,7 +495,7 @@ class TagsDialog : AnalyticsDialogFragment {
                 }
                 var previousColonsCnt = 0
                 if (dest != null) {
-                    val previousPart = dest.substring(0, destStart)
+                    val previousPart = dest.take(destStart)
                     if (previousPart.endsWith("::")) {
                         previousColonsCnt = 2
                     } else if (previousPart.endsWith(":")) {

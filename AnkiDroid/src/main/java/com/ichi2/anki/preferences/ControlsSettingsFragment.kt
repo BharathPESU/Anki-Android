@@ -17,6 +17,7 @@ package com.ichi2.anki.preferences
 
 import android.content.res.Configuration
 import androidx.annotation.XmlRes
+import androidx.appcompat.app.AlertDialog
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.withResumed
 import androidx.lifecycle.withStarted
@@ -30,12 +31,16 @@ import com.ichi2.anki.cardviewer.ViewerCommand
 import com.ichi2.anki.common.annotations.NeedsTest
 import com.ichi2.anki.preferences.reviewer.ViewerAction
 import com.ichi2.anki.previewer.PreviewerAction
+import com.ichi2.anki.reviewer.CardSide
 import com.ichi2.anki.reviewer.MappableAction
 import com.ichi2.anki.reviewer.MappableBinding.Companion.toPreferenceString
 import com.ichi2.anki.settings.Prefs
+import com.ichi2.anki.ui.internationalization.sentenceCase
 import com.ichi2.anki.ui.internationalization.toSentenceCase
 import com.ichi2.anki.utils.ext.sharedPrefs
 import com.ichi2.preferences.ControlPreference
+import com.ichi2.preferences.ReviewerControlPreference
+import com.ichi2.utils.show
 import kotlinx.coroutines.launch
 import timber.log.Timber
 
@@ -63,6 +68,7 @@ class ControlsSettingsFragment :
         setControlPreferencesDefaultValues(initialScreen)
         setDynamicTitle()
         setupNewStudyScreenSettings()
+        setupAnswerCommands()
     }
 
     /**
@@ -119,6 +125,7 @@ class ControlsSettingsFragment :
         setControlPreferencesDefaultValues(screen)
         setDynamicTitle()
         setupNewStudyScreenSettings()
+        setupAnswerCommands()
     }
 
     @NeedsTest("Only the tab elements are removed")
@@ -134,7 +141,7 @@ class ControlsSettingsFragment :
 
     private fun setDynamicTitle() {
         findPreference<ControlPreference>(getString(R.string.reschedule_command_key))?.let {
-            val preferenceTitle = TR.actionsSetDueDate().toSentenceCase(R.string.sentence_set_due_date)
+            val preferenceTitle = TR.sentenceCase.setDueDate
             it.title = preferenceTitle
             it.dialogTitle = preferenceTitle
         }
@@ -171,6 +178,10 @@ class ControlsSettingsFragment :
         if (!Prefs.isNewStudyScreenEnabled) {
             findPreference<Preference>(R.string.gestures_corner_touch_preference)?.dependency = getString(R.string.gestures_preference)
             findPreference<Preference>(R.string.pref_swipe_sensitivity_key)?.dependency = getString(R.string.gestures_preference)
+            findPreference<Preference>(R.string.pref_key_whiteboard_undo)?.isVisible = false
+            findPreference<Preference>(R.string.pref_key_whiteboard_toggle_eraser)?.isVisible = false
+            findPreference<Preference>(R.string.pref_key_whiteboard_redo)?.isVisible = false
+            findPreference<Preference>(R.string.pref_key_whiteboard_clear)?.isVisible = false
             return
         }
         for (keyRes in legacyStudyScreenSettings) {
@@ -189,6 +200,43 @@ class ControlsSettingsFragment :
             isVisible = true
             if (value == null) {
                 value = ViewerAction.STATISTICS.getBindings(sharedPrefs()).toPreferenceString()
+            }
+        }
+    }
+
+    private fun setupAnswerCommands() {
+        val showAnswerPref = (findPreference<ControlPreference>(R.string.show_answer_command_key) as? ReviewerControlPreference)
+
+        val answerCommandKeys =
+            listOf(
+                ViewerAction.ANSWER_AGAIN.preferenceKey,
+                ViewerAction.ANSWER_HARD.preferenceKey,
+                ViewerAction.ANSWER_GOOD.preferenceKey,
+                ViewerAction.ANSWER_EASY.preferenceKey,
+            )
+        for (key in answerCommandKeys) {
+            (findPreference<Preference>(key) as? ReviewerControlPreference)?.let { answerPref ->
+                val items =
+                    arrayOf(
+                        getString(R.string.only_answer),
+                        getString(R.string.flip_and_answer),
+                    )
+                answerPref.setOnBindingSelectedListener { binding ->
+                    AlertDialog.Builder(requireContext()).show {
+                        setTitle(answerPref.title)
+                        setIcon(answerPref.icon)
+                        setItems(items) { _, index ->
+                            when (index) {
+                                0 -> answerPref.addBinding(binding, CardSide.ANSWER)
+                                1 -> {
+                                    answerPref.addBinding(binding, CardSide.ANSWER)
+                                    showAnswerPref?.addBinding(binding, CardSide.QUESTION)
+                                }
+                            }
+                        }
+                    }
+                    true
+                }
             }
         }
     }

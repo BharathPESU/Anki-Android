@@ -36,7 +36,7 @@
                 android:paddingBottom="84dp"
                 android:scrollbars="vertical"
                 android:contentDescription="List of scheduled review reminders"
-                tools:listitem="@layout/schedule_reminders_list_item"
+                tools:listitem="@layout/item_schedule_reminders"
                 tools:ignore="HardcodedText" />
 
             <LinearLayout
@@ -53,7 +53,7 @@
                     android:layout_gravity="center_horizontal"
                     app:srcCompat="@drawable/outline_notifications_off_24" />
 
-                <com.ichi2.ui.FixedTextView
+                <com.google.android.material.textview.MaterialTextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginBottom="8dp"

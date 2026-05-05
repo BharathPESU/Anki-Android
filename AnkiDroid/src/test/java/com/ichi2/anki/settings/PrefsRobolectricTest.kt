@@ -18,6 +18,7 @@ package com.ichi2.anki.settings
 import android.content.res.Resources
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.github.ivanshafran.sharedpreferencesmock.SPMockBuilder
+import com.ichi2.anki.EmptyApplicationCategory
 import com.ichi2.anki.RobolectricTest
 import com.ichi2.anki.libanki.utils.append
 import com.ichi2.anki.preferences.PreferenceTestUtils
@@ -30,6 +31,7 @@ import io.mockk.mockk
 import org.hamcrest.MatcherAssert.assertThat
 import org.hamcrest.Matchers.equalTo
 import org.junit.Test
+import org.junit.experimental.categories.Category
 import org.junit.runner.RunWith
 import org.mockito.kotlin.any
 import org.mockito.kotlin.anyOrNull
@@ -42,12 +44,12 @@ import kotlin.reflect.KVisibility
 import kotlin.reflect.full.createType
 import kotlin.reflect.full.isSubtypeOf
 import kotlin.reflect.full.memberProperties
-import kotlin.sequences.map
 import kotlin.test.assertContains
 import kotlin.test.assertEquals
 
 @RunWith(AndroidJUnit4::class)
 @Config(application = EmptyApplication::class)
+@Category(EmptyApplicationCategory::class)
 class PrefsRobolectricTest : RobolectricTest() {
     private fun getKeysAndDefaultValues(): MutableMap<String, Any?> {
         val sharedPrefsSpy = spy(SPMockBuilder().createSharedPreferences())
@@ -77,7 +79,7 @@ class PrefsRobolectricTest : RobolectricTest() {
     @Test
     fun `all default values match the preference XMLs`() {
         val keysAndDefaultValues = getKeysAndDefaultValues()
-        val devOptionsKeys = PreferenceTestUtils.getDevOptionsKeys(targetContext)
+        val developerOptionsKeys = PreferenceTestUtils.getDeveloperOptionsKeys(targetContext)
         val prefs =
             PreferenceTestUtils
                 .getAllPreferencesFragments(targetContext)
@@ -89,7 +91,7 @@ class PrefsRobolectricTest : RobolectricTest() {
                 .associate { PreferenceTestUtils.attrValueToString(it["key"]!!, targetContext) to it["defaultValue"] }
 
         for ((key, defaultValue) in keysAndDefaultValues.entries) {
-            if (key !in prefs || key in devOptionsKeys) continue
+            if (key !in prefs || key in developerOptionsKeys) continue
             val prefsDefaultValue = prefs.getValue(key)
             assertThat("The default value of '$key' matches the preference XML", defaultValue.toString(), equalTo(prefsDefaultValue))
         }

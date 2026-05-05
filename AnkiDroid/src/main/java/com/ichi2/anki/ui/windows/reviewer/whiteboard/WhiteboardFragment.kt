@@ -21,12 +21,14 @@ import android.graphics.drawable.GradientDrawable
 import android.graphics.drawable.LayerDrawable
 import android.os.Bundle
 import android.view.Gravity
+import android.view.KeyEvent
 import android.view.LayoutInflater
 import android.view.MenuItem
 import android.view.View
 import android.view.ViewGroup
 import android.widget.FrameLayout
 import android.widget.PopupWindow
+import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.view.menu.MenuBuilder
 import androidx.appcompat.widget.PopupMenu
@@ -34,17 +36,25 @@ import androidx.core.view.updateLayoutParams
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
+import com.google.android.material.snackbar.Snackbar
 import com.ichi2.anki.AnkiDroidApp
+import com.ichi2.anki.DispatchKeyEventListener
 import com.ichi2.anki.R
+import com.ichi2.anki.android.back.doubleBackPressCallback
+import com.ichi2.anki.cardviewer.Gesture
+import com.ichi2.anki.compat.CompatHelper.Companion.compat
 import com.ichi2.anki.databinding.FragmentWhiteboardBinding
 import com.ichi2.anki.databinding.PopupBrushOptionsBinding
 import com.ichi2.anki.databinding.PopupEraserOptionsBinding
+import com.ichi2.anki.preferences.reviewer.WhiteboardAction
+import com.ichi2.anki.reviewer.BindingMap
+import com.ichi2.anki.reviewer.ReviewerBinding
 import com.ichi2.anki.snackbar.showSnackbar
+import com.ichi2.anki.utils.ext.sharedPrefs
 import com.ichi2.themes.Themes
 import com.ichi2.utils.dp
 import com.ichi2.utils.increaseHorizontalPaddingOfMenuIcons
 import com.ichi2.utils.toRGBAHex
-import com.mrudultora.colorpicker.ColorPickerPopUp
 import dev.androidbroadcast.vbpd.viewBinding
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.launchIn
@@ -57,15 +67,21 @@ import kotlin.math.roundToInt
  */
 class WhiteboardFragment :
     Fragment(R.layout.fragment_whiteboard),
-    PopupMenu.OnMenuItemClickListener {
+    PopupMenu.OnMenuItemClickListener,
+    DispatchKeyEventListener {
     private val viewModel: WhiteboardViewModel by viewModels {
         WhiteboardViewModel.factory(AnkiDroidApp.sharedPrefs())
     }
 
     val binding by viewBinding(FragmentWhiteboardBinding::bind)
+    private lateinit var bindingMap: BindingMap<ReviewerBinding, WhiteboardAction>
+    private var doubleBackCallback: OnBackPressedCallback? = null
 
     private var eraserPopup: PopupWindow? = null
     private var brushConfigPopup: PopupWindow? = null
+
+    /** Called when no bindings used the triggered gestures */
+    var gestureFallbackListener: ((Gesture) -> Unit)? = null
 
     override fun onViewCreated(
         view: View,
@@ -78,11 +94,32 @@ class WhiteboardFragment :
 
         setupUI()
         observeViewModel(binding.whiteboardView)
+        setupDoubleBackPress()
 
         binding.whiteboardView.onNewPath = viewModel::addPath
         binding.whiteboardView.onEraseGestureStart = viewModel::startPathEraseGesture
-        binding.whiteboardView.onEraseGestureMove = viewModel::erasePathsAtPoint
+        binding.whiteboardView.onEraseGestureMove = viewModel::erasePathsToPoint
         binding.whiteboardView.onEraseGestureEnd = viewModel::endPathEraseGesture
+    }
+
+    private fun setupDoubleBackPress() {
+        val isUsingGesturesNavigation = context?.let { compat.isUsingSystemGestureNavigation(it) } == true
+        doubleBackCallback =
+            doubleBackPressCallback(
+                enabled = !isHidden && isUsingGesturesNavigation,
+                onFirstBack = { showSnackbar(R.string.back_pressed_once, Snackbar.LENGTH_SHORT) },
+                shouldReEnable = {
+                    !isHidden && isUsingGesturesNavigation
+                },
+            ).also {
+                requireActivity().onBackPressedDispatcher.addCallback(viewLifecycleOwner, it)
+            }
+    }
+
+    override fun onHiddenChanged(hidden: Boolean) {
+        super.onHiddenChanged(hidden)
+        val isUsingGesturesNavigation = context?.let { compat.isUsingSystemGestureNavigation(it) } == true
+        doubleBackCallback?.isEnabled = !hidden && isUsingGesturesNavigation
     }
 
     private fun setupUI() {
@@ -142,7 +179,36 @@ class WhiteboardFragment :
 
         viewModel.canUndo.onEach { toolbar.undoButton.isEnabled = it }.launchIn(lifecycleScope)
         viewModel.canRedo.onEach { toolbar.redoButton.isEnabled = it }.launchIn(lifecycleScope)
+
+        binding.whiteboardToolbar.onToolbarVisibilityChanged = { isShown ->
+            viewModel.setIsToolbarShown(isShown)
+        }
+
+        bindingMap = BindingMap(sharedPrefs(), WhiteboardAction.entries, viewModel)
+        binding.root.setOnGenericMotionListener { _, event ->
+            bindingMap.onGenericMotionEvent(event)
+        }
+        binding.whiteboardView.setOnMultiTouchListener { touchNumber ->
+            val gesture =
+                when (touchNumber) {
+                    2 -> Gesture.TWO_FINGER_TAP
+                    3 -> Gesture.THREE_FINGER_TAP
+                    4 -> Gesture.FOUR_FINGER_TAP
+                    else -> return@setOnMultiTouchListener
+                }
+            val result = bindingMap.onGesture(gesture)
+            if (!result) {
+                gestureFallbackListener?.invoke(gesture)
+            }
+        }
     }
+
+    override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        if (event.action != KeyEvent.ACTION_DOWN) return false
+        return bindingMap.onKeyDown(event)
+    }
+
+    fun onScreenShake(): Boolean = bindingMap.onGesture(Gesture.SHAKE)
 
     /**
      * Sets up observers for the ViewModel's flows.
@@ -197,27 +263,26 @@ class WhiteboardFragment :
                 toolbar.setAlignment(alignment)
                 updateToolbarPosition(alignment)
             }.launchIn(lifecycleScope)
+
+        viewModel.isToolbarShown
+            .onEach { isShown ->
+                if (isShown) {
+                    showToolbar()
+                } else {
+                    hideToolbar()
+                }
+            }.launchIn(lifecycleScope)
     }
 
     /**
      * Shows a dialog for adding a new brush color.
      */
     private fun showAddColorDialog() {
-        ColorPickerPopUp(context).run {
-            setShowAlpha(true)
-            setDefaultColor(viewModel.brushColor.value)
-            setOnPickColorListener(
-                object : ColorPickerPopUp.OnPickColorListener {
-                    override fun onColorPicked(color: Int) {
-                        Timber.i("Added brush with color ${color.toRGBAHex()}")
-                        viewModel.addBrush(color)
-                    }
-
-                    override fun onCancel() {}
-                },
-            )
-            show()
-        }
+        requireContext()
+            .showColorPickerDialog(viewModel.brushColor.value) { color ->
+                Timber.i("Added brush with color ${color.toRGBAHex()}")
+                viewModel.addBrush(color)
+            }
     }
 
     /**
@@ -296,19 +361,11 @@ class WhiteboardFragment :
      * Shows a color picker popup to change the active brush's color.
      */
     private fun showChangeColorDialog() {
-        ColorPickerPopUp(requireContext())
-            .setShowAlpha(true)
-            .setDefaultColor(viewModel.brushColor.value)
-            .setOnPickColorListener(
-                object : ColorPickerPopUp.OnPickColorListener {
-                    override fun onColorPicked(color: Int) {
-                        viewModel.updateBrushColor(color)
-                        brushConfigPopup?.dismiss()
-                    }
-
-                    override fun onCancel() {}
-                },
-            ).show()
+        requireContext()
+            .showColorPickerDialog(viewModel.brushColor.value) { color ->
+                viewModel.updateBrushColor(color)
+                brushConfigPopup?.dismiss()
+            }
     }
 
     /**
@@ -349,12 +406,7 @@ class WhiteboardFragment :
             }
         }
 
-        eraserWidthBinding.clearButton.setOnClickListener {
-            viewModel.clearCanvas()
-            eraserPopup?.dismiss()
-        }
-
-        eraserPopup = PopupWindow(eraserWidthBinding.root, 360.dp.toPx(requireContext()), ViewGroup.LayoutParams.WRAP_CONTENT, true)
+        eraserPopup = PopupWindow(eraserWidthBinding.root, 280.dp.toPx(requireContext()), ViewGroup.LayoutParams.WRAP_CONTENT, true)
         eraserPopup?.elevation = 8f
         eraserPopup?.setOnDismissListener {
             binding.whiteboardToolbar.updateSelection(viewModel.activeBrushIndex.value, viewModel.isEraserActive.value)
@@ -379,6 +431,18 @@ class WhiteboardFragment :
         }
     }
 
+    private fun showToolbar() {
+        binding.whiteboardToolbar.post {
+            binding.whiteboardToolbar.show()
+        }
+    }
+
+    private fun hideToolbar() {
+        binding.whiteboardToolbar.post {
+            binding.whiteboardToolbar.hide()
+        }
+    }
+
     override fun onMenuItemClick(item: MenuItem): Boolean {
         Timber.i("WhiteboardFragment::onMenuItemClick %s", item.title)
         when (item.itemId) {
@@ -387,12 +451,23 @@ class WhiteboardFragment :
                 item.isChecked = !item.isChecked
                 viewModel.toggleStylusOnlyMode()
             }
+            R.id.action_hide_toolbar -> viewModel.setIsToolbarShown(false)
             R.id.action_align_left -> viewModel.setToolbarAlignment(ToolbarAlignment.LEFT)
             R.id.action_align_bottom -> viewModel.setToolbarAlignment(ToolbarAlignment.BOTTOM)
             R.id.action_align_right -> viewModel.setToolbarAlignment(ToolbarAlignment.RIGHT)
+            R.id.action_clear -> viewModel.clearCanvas()
             else -> return false
         }
         return true
+    }
+
+    /**
+     * Sets a listener to when the whiteboard is scrolled vertically,
+     * which can happen by scrolling with two fingers, or with just one
+     * if the `Stylus mode` is enabled.
+     */
+    fun setOnScrollByListener(listener: OnScrollByListener) {
+        binding.whiteboardView.setOnScrollByListener(listener)
     }
 
     fun resetCanvas() = viewModel.reset()

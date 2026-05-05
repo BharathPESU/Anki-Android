@@ -122,6 +122,7 @@
     <string name="menu_unmark_note">Odznačit poznámku</string>
     <string name="menu_enable_voice_playback" maxLength="28">Povolit přehrávání hlasu</string>
     <string name="menu_disable_voice_playback">Zakázat přehrávání hlasu</string>
+    <string name="menu_create_backup" maxLength="28">Vytvořit zálohu</string>
     <string name="new_deck">Vytvořit balíček</string>
     <string name="new_dynamic_deck">Vytvořit filtrovaný balíček</string>
     <string name="directory_inaccessible">AnkiDroid adresář není přístupný</string>
@@ -150,7 +151,6 @@
     <string name="syncing_media">Synchronizace multimédií</string>
     <string name="export_deck" maxLength="28">Export balíčku</string>
     <string name="export_collection">Exportovat kolekci</string>
-    <string name="nothing">Nic</string>
     <!-- Card template editor -->
     <string name="title_activity_template_editor">Typ karet</string>
     <string name="card_template_editor_front">Šablona líce</string>
@@ -222,6 +222,10 @@
     <string name="remove_account" comment="open a website to start the deletion of an AnkiWeb account">Odebrat účet</string>
     <!-- Instant Note Editor -->
     <string name="instant_card" comment="Used in the Android system context menu/share dialog to quickly create a note. This does not need to be translated literally, translate the concept of quickly adding a Cloze note with a popup. ">Okamžitá karta</string>
+    <!-- Internet Permissions -->
+    <string name="internet_access_title" comment="used for notifying user to unable internet access">Internet</string>
+    <string name="permission_access_summary">Vyžadováno, aby aplikace fungovala</string>
+    <string name="permission_required_message">Abyste mohli pokračovat, prosím udělte AnkiDroidu oprávnění „%s“</string>
     <!-- Multiple profile -->
     <string name="add_profile">Přidat profil</string>
 </resources>
